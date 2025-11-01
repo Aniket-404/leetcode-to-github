@@ -141,8 +141,7 @@ async function notifyContentScript(tabId, submissionData) {
 chrome.runtime.onInstalled.addListener((details) => {
   if (details.reason === 'install') {
     console.log('LeetCode to GitHub: Extension installed');
-    // Open options page on first install
-    chrome.runtime.openOptionsPage();
+    console.log('LeetCode to GitHub: Click the extension icon to configure your GitHub settings');
   } else if (details.reason === 'update') {
     console.log('LeetCode to GitHub: Extension updated to version', chrome.runtime.getManifest().version);
   }
