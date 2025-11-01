@@ -104,31 +104,20 @@ async function checkSubmissionStatus(url, tabId) {
  */
 async function notifyContentScript(tabId, submissionData) {
   try {
-    // If tabId is invalid, find the active LeetCode tab
-    if (tabId < 0) {
-      console.log('LeetCode to GitHub: Invalid tabId, searching for LeetCode tabs...');
-      const tabs = await chrome.tabs.query({ url: '*://*.leetcode.com/problems/*' });
-      
-      if (tabs.length === 0) {
-        console.log('LeetCode to GitHub: No LeetCode problem tabs found');
-        return;
-      }
-      
-      // Use the first LeetCode problem tab found (or the active one if available)
-      const activeTab = tabs.find(t => t.active) || tabs[0];
-      tabId = activeTab.id;
-      console.log('LeetCode to GitHub: Found LeetCode tab:', tabId);
-    }
+    // Always find the active LeetCode tab instead of trusting webRequest tabId
+    console.log('LeetCode to GitHub: Searching for LeetCode tabs...');
+    const tabs = await chrome.tabs.query({ url: '*://*.leetcode.com/problems/*' });
     
-    // Verify the tab exists and is a LeetCode page
-    const tab = await chrome.tabs.get(tabId);
-    
-    if (!tab.url || !tab.url.includes('leetcode.com')) {
-      console.log('LeetCode to GitHub: Tab is not a LeetCode page, skipping notification');
+    if (tabs.length === 0) {
+      console.log('LeetCode to GitHub: No LeetCode problem tabs found');
       return;
     }
     
-    console.log('LeetCode to GitHub: Sending message to content script in tab', tabId);
+    // Use the active tab if available, otherwise use the first one
+    const targetTab = tabs.find(t => t.active) || tabs[0];
+    console.log('LeetCode to GitHub: Found LeetCode tab:', targetTab.id, targetTab.url);
+    
+    console.log('LeetCode to GitHub: Sending message to content script in tab', targetTab.id);
     
     // Send message to content script
     const message = {
@@ -144,7 +133,7 @@ async function notifyContentScript(tabId, submissionData) {
       }
     };
     
-    await chrome.tabs.sendMessage(tabId, message);
+    await chrome.tabs.sendMessage(targetTab.id, message);
     console.log('LeetCode to GitHub: ✅ Message sent to content script successfully');
   } catch (error) {
     // Tab might be closed or content script not injected yet
