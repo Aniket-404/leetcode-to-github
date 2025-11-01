@@ -579,7 +579,17 @@ async function sendToBackground(data) {
     });
     
     console.log('LeetCode to GitHub: Background script response:', response);
-    showNotification('Ready to Push', 'Solution data extracted successfully! (GitHub push coming in next task)', 'success');
+    
+    // Show appropriate notification based on response status
+    if (response.status === 'success') {
+      showNotification('Pushed to GitHub! ✓', response.message || 'Solution successfully pushed to your repository', 'success');
+    } else if (response.status === 'partial') {
+      showNotification('Partially Pushed', response.message || 'Some files failed to push', 'warning');
+    } else if (response.status === 'error') {
+      showNotification('Push Failed', response.message || 'Failed to push to GitHub', 'error');
+    } else {
+      showNotification('Ready to Push', 'Solution data extracted successfully', 'success');
+    }
   } catch (error) {
     console.error('LeetCode to GitHub: Error sending to background:', error);
     showNotification('Error', 'Failed to send data to background script', 'error');

@@ -105,8 +105,17 @@ async function checkSubmissionStatus(url, tabId) {
       processedSubmissions.add(url);
     }
   } catch (error) {
+    // Handle network errors gracefully
+    if (error.message.includes('Failed to fetch')) {
+      console.warn('LeetCode to GitHub: Network error - unable to fetch submission status. This may be due to being offline or CORS restrictions.');
+      // Mark as processed to avoid repeated error logs
+      processedSubmissions.add(url);
+      return;
+    }
+    
     console.error('LeetCode to GitHub: Error fetching submission status:', error);
-    throw error;
+    // Mark as processed to avoid repeated attempts
+    processedSubmissions.add(url);
   }
 }
 
@@ -303,7 +312,7 @@ function prepareFilesForGitHub(problemData) {
 async function pushFileToGitHub(pat, owner, repo, file, problemTitle) {
   const apiUrl = `https://api.github.com/repos/${owner}/${repo}/contents/${file.path}`;
   
-  // Step 1: Check if file exists (GET request)
+  // Step 1: Check if file exists (GET request) and get latest SHA
   let sha = null;
   let isUpdate = false;
   
@@ -319,6 +328,20 @@ async function pushFileToGitHub(pat, owner, repo, file, problemTitle) {
     
     if (checkResponse.ok) {
       const existingFile = await checkResponse.json();
+      
+      // Compare content to avoid unnecessary updates
+      const existingContent = atob(existingFile.content);
+      const newContent = atob(file.content);
+      
+      if (existingContent === newContent) {
+        console.log(`LeetCode to GitHub: File ${file.path} content unchanged, skipping update`);
+        return {
+          action: 'Unchanged',
+          sha: existingFile.sha,
+          commitUrl: existingFile.html_url
+        };
+      }
+      
       sha = existingFile.sha;
       isUpdate = true;
       console.log(`LeetCode to GitHub: File ${file.path} exists, will update (SHA: ${sha})`);
@@ -366,6 +389,52 @@ async function pushFileToGitHub(pat, owner, repo, file, problemTitle) {
       const errorData = await pushResponse.json().catch(() => ({}));
       const errorMessage = errorData.message || pushResponse.statusText;
       
+      // Handle 409 Conflict by retrying once with fresh SHA
+      if (pushResponse.status === 409 || (pushResponse.status === 422 && errorMessage.includes('sha'))) {
+        console.warn(`LeetCode to GitHub: Conflict detected for ${file.path}, retrying with fresh SHA...`);
+        
+        try {
+          // Get fresh SHA
+          const retryCheckResponse = await fetch(apiUrl, {
+            method: 'GET',
+            headers: {
+              'Authorization': `Bearer ${pat}`,
+              'Accept': 'application/vnd.github.v3+json',
+              'User-Agent': 'LeetCode-to-GitHub-Extension'
+            }
+          });
+          
+          if (retryCheckResponse.ok) {
+            const freshFile = await retryCheckResponse.json();
+            body.sha = freshFile.sha;
+            
+            // Retry the PUT with fresh SHA
+            const retryResponse = await fetch(apiUrl, {
+              method: 'PUT',
+              headers: {
+                'Authorization': `Bearer ${pat}`,
+                'Accept': 'application/vnd.github.v3+json',
+                'Content-Type': 'application/json',
+                'User-Agent': 'LeetCode-to-GitHub-Extension'
+              },
+              body: JSON.stringify(body)
+            });
+            
+            if (retryResponse.ok) {
+              const result = await retryResponse.json();
+              console.log(`LeetCode to GitHub: ✅ Retry successful for ${file.path}`);
+              return {
+                action: 'Updated',
+                sha: result.content.sha,
+                commitUrl: result.commit.html_url
+              };
+            }
+          }
+        } catch (retryError) {
+          console.warn(`LeetCode to GitHub: Retry failed for ${file.path}:`, retryError.message);
+        }
+      }
+      
       switch (pushResponse.status) {
         case 401:
           throw new Error('Authentication failed. Please check your GitHub Personal Access Token.');
@@ -374,7 +443,7 @@ async function pushFileToGitHub(pat, owner, repo, file, problemTitle) {
         case 404:
           throw new Error(`Repository ${owner}/${repo} not found. Please check the repository name.`);
         case 409:
-          throw new Error('Conflict: File was modified since last check. Please try again.');
+          throw new Error('Conflict: File was modified since last check. Retry failed.');
         case 422:
           throw new Error(`Validation failed: ${errorMessage}`);
         default:
