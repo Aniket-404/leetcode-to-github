@@ -165,6 +165,23 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true;
   }
   
+  if (message.type === 'pushToGitHub') {
+    // Received problem data from content script
+    console.log('LeetCode to GitHub: Received problem data for GitHub push');
+    console.log('LeetCode to GitHub: Problem:', message.data.title);
+    console.log('LeetCode to GitHub: Language:', message.data.language);
+    console.log('LeetCode to GitHub: Code length:', message.data.code?.length || 0, 'chars');
+    
+    // TODO: In next task, this will push to GitHub
+    // For now, just acknowledge receipt
+    sendResponse({ 
+      status: 'received', 
+      message: 'Data received successfully. GitHub push will be implemented in next task.',
+      timestamp: Date.now() 
+    });
+    return true;
+  }
+  
   return false; // No async response needed
 });
 
