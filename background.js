@@ -74,12 +74,11 @@ async function checkSubmissionStatus(url, tabId) {
       run_success: data.run_success
     });
     
-    // CRITICAL: Distinguish between "Run Code" and "Submit"
-    // "Run Code" (interpret_solution) has run_success field
-    // "Submit" has total_testcases field
-    // Only process actual submissions, not test runs
-    if (data.run_success !== undefined) {
-      console.log('LeetCode to GitHub: This is a test run, not a submission. Skipping GitHub push.');
+    // CRITICAL: Distinguish between "Run Code" and "Submit" by checking URL
+    // "Run Code" URLs contain "runcode_" (e.g., /submissions/detail/runcode_123.456_ABC/check/)
+    // "Submit" URLs have numeric IDs only (e.g., /submissions/detail/1817988238/check/)
+    if (url.includes('runcode_')) {
+      console.log('LeetCode to GitHub: This is a test run (Run Code), not a submission. Skipping GitHub push.');
       processedSubmissions.add(url);
       return;
     }
