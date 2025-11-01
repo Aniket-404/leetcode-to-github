@@ -1,38 +1,3 @@
-// Security: Prevent token from being logged or exposed in DevTools
-// MUST be at the top before any other code runs
-(function() {
-  const originalLog = console.log.bind(console);
-  const originalError = console.error.bind(console);
-  const originalWarn = console.warn.bind(console);
-
-  console.log = function(...args) {
-    const filteredArgs = args.map(arg => 
-      typeof arg === 'string' && (arg.includes('ghp_') || arg.includes('github_pat_')) 
-        ? '[REDACTED_TOKEN]' 
-        : arg
-    );
-    originalLog(...filteredArgs);
-  };
-
-  console.error = function(...args) {
-    const filteredArgs = args.map(arg => 
-      typeof arg === 'string' && (arg.includes('ghp_') || arg.includes('github_pat_')) 
-        ? '[REDACTED_TOKEN]' 
-        : arg
-    );
-    originalError(...filteredArgs);
-  };
-
-  console.warn = function(...args) {
-    const filteredArgs = args.map(arg => 
-      typeof arg === 'string' && (arg.includes('ghp_') || arg.includes('github_pat_')) 
-        ? '[REDACTED_TOKEN]' 
-        : arg
-    );
-    originalWarn(...filteredArgs);
-  };
-})();
-
 // DOM Elements
 const form = document.getElementById('settingsForm');
 const alertMessage = document.getElementById('alertMessage');
@@ -332,7 +297,8 @@ function updateRepoLink() {
   const username = usernameInput.value.trim();
   const repo = repoInput.value.trim();
   
-  if (username && repo && validateUsername() && validateRepo()) {
+  // Just check if values exist, don't validate (to avoid recursion)
+  if (username && repo) {
     const link = repoLinkEl.querySelector('a');
     link.href = `https://github.com/${username}/${repo}`;
     repoLinkEl.classList.remove('hidden');
