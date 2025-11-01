@@ -22,6 +22,12 @@ chrome.webRequest.onCompleted.addListener(
   async (details) => {
     console.log('LeetCode to GitHub: Detected submission check request:', details.url);
     
+    // Check if already processed BEFORE fetching
+    if (processedSubmissions.has(details.url)) {
+      console.log('LeetCode to GitHub: Submission already processed, skipping');
+      return;
+    }
+    
     // Fetch the submission result to check if it's "Accepted"
     try {
       await checkSubmissionStatus(details.url, details.tabId);
@@ -70,16 +76,12 @@ async function checkSubmissionStatus(url, tabId) {
     // state: "SUCCESS" means the check is complete
     // status_msg: "Accepted" means the solution passed all test cases
     if (data.state === 'SUCCESS' && data.status_msg === 'Accepted') {
-      // Avoid processing the same submission multiple times
-      if (processedSubmissions.has(url)) {
-        console.log('LeetCode to GitHub: Submission already processed, skipping');
-        return;
-      }
+      console.log('LeetCode to GitHub: ✅ Accepted submission detected!');
       
-      // Mark as processed
+      // Mark as processed FIRST to prevent race conditions with multiple polls
       processedSubmissions.add(url);
       
-      console.log('LeetCode to GitHub: ✅ Accepted submission detected!');
+      // Notify content script
       await notifyContentScript(tabId, data);
     } else if (data.state === 'PENDING' || data.state === 'STARTED') {
       console.log('LeetCode to GitHub: Submission still processing...');
