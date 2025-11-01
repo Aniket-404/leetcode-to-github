@@ -1,35 +1,37 @@
 // Security: Prevent token from being logged or exposed in DevTools
 // MUST be at the top before any other code runs
-const originalLog = console.log;
-const originalError = console.error;
-const originalWarn = console.warn;
+(function() {
+  const originalLog = console.log.bind(console);
+  const originalError = console.error.bind(console);
+  const originalWarn = console.warn.bind(console);
 
-console.log = function(...args) {
-  const filteredArgs = args.map(arg => 
-    typeof arg === 'string' && (arg.includes('ghp_') || arg.includes('github_pat_')) 
-      ? '[REDACTED_TOKEN]' 
-      : arg
-  );
-  originalLog.apply(console, filteredArgs);
-};
+  console.log = function(...args) {
+    const filteredArgs = args.map(arg => 
+      typeof arg === 'string' && (arg.includes('ghp_') || arg.includes('github_pat_')) 
+        ? '[REDACTED_TOKEN]' 
+        : arg
+    );
+    originalLog(...filteredArgs);
+  };
 
-console.error = function(...args) {
-  const filteredArgs = args.map(arg => 
-    typeof arg === 'string' && (arg.includes('ghp_') || arg.includes('github_pat_')) 
-      ? '[REDACTED_TOKEN]' 
-      : arg
-  );
-  originalError.apply(console, filteredArgs);
-};
+  console.error = function(...args) {
+    const filteredArgs = args.map(arg => 
+      typeof arg === 'string' && (arg.includes('ghp_') || arg.includes('github_pat_')) 
+        ? '[REDACTED_TOKEN]' 
+        : arg
+    );
+    originalError(...filteredArgs);
+  };
 
-console.warn = function(...args) {
-  const filteredArgs = args.map(arg => 
-    typeof arg === 'string' && (arg.includes('ghp_') || arg.includes('github_pat_')) 
-      ? '[REDACTED_TOKEN]' 
-      : arg
-  );
-  originalWarn.apply(console, filteredArgs);
-};
+  console.warn = function(...args) {
+    const filteredArgs = args.map(arg => 
+      typeof arg === 'string' && (arg.includes('ghp_') || arg.includes('github_pat_')) 
+        ? '[REDACTED_TOKEN]' 
+        : arg
+    );
+    originalWarn(...filteredArgs);
+  };
+})();
 
 // DOM Elements
 const form = document.getElementById('settingsForm');
