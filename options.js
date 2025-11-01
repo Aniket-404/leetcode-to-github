@@ -301,7 +301,9 @@ function updateRepoLink() {
     const link = repoLinkEl.querySelector('a');
     link.href = `https://github.com/${username}/${repo}`;
     repoLinkEl.classList.remove('hidden');
+    repoLinkEl.classList.add('show');
   } else {
+    repoLinkEl.classList.remove('show');
     repoLinkEl.classList.add('hidden');
   }
 }
@@ -312,7 +314,11 @@ function updateRepoLink() {
 function showValidationError(errorEl, successEl, message) {
   errorEl.querySelector('span').textContent = message;
   errorEl.classList.remove('hidden');
-  if (successEl) successEl.classList.add('hidden');
+  errorEl.classList.add('show');
+  if (successEl) {
+    successEl.classList.remove('show');
+    successEl.classList.add('hidden');
+  }
   
   // Update ARIA attributes
   const inputId = errorEl.id.replace('Error', '');
@@ -328,6 +334,8 @@ function showValidationError(errorEl, successEl, message) {
 function showValidationSuccess(errorEl, successEl, message) {
   successEl.querySelector('span').textContent = message;
   successEl.classList.remove('hidden');
+  successEl.classList.add('show');
+  errorEl.classList.remove('show');
   errorEl.classList.add('hidden');
   
   // Update ARIA attributes
@@ -342,8 +350,12 @@ function showValidationSuccess(errorEl, successEl, message) {
  * Hide validation messages
  */
 function hideValidation(errorEl, successEl = null) {
+  errorEl.classList.remove('show');
   errorEl.classList.add('hidden');
-  if (successEl) successEl.classList.add('hidden');
+  if (successEl) {
+    successEl.classList.remove('show');
+    successEl.classList.add('hidden');
+  }
   
   // Update ARIA attributes
   const inputId = errorEl.id.replace('Error', '');
@@ -383,6 +395,7 @@ async function loadSettings() {
     // Show status card if settings exist
     if (result.githubPat && result.githubUsername && result.githubRepo) {
       statusCard.classList.remove('hidden');
+      statusCard.classList.add('show');
       if (result.lastSync) {
         const date = new Date(result.lastSync);
         lastSyncEl.textContent = date.toLocaleString();
@@ -538,34 +551,28 @@ async function testRepoAccess(token, username, repo) {
 }
 
 /**
- * Display alert message
+ * Display an alert message with specified type
  * @param {string} message - The message to display
- * @param {string} type - 'success', 'error', or 'warning'
+ * @param {string} type - Alert type: 'success', 'error', 'warning'
  */
-function showAlert(message, type) {
+function showAlert(message, type = 'success') {
   alertText.textContent = message;
-  alertMessage.classList.remove('hidden', 'bg-green-500/10', 'bg-red-500/10', 'bg-yellow-500/10', 'border-green-500/20', 'border-red-500/20', 'border-yellow-500/20', 'text-green-400', 'text-red-400', 'text-yellow-400');
+  alertMessage.classList.remove('hidden', 'success', 'error', 'warning');
+  alertMessage.classList.add('show', type);
 
+  // Update icon based on type
   if (type === 'success') {
-    alertMessage.classList.add('bg-green-500/10', 'border', 'border-green-500/20');
-    alertText.classList.add('text-green-400');
-    alertIcon.classList.add('text-green-400');
     alertIcon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>';
   } else if (type === 'error') {
-    alertMessage.classList.add('bg-red-500/10', 'border', 'border-red-500/20');
-    alertText.classList.add('text-red-400');
-    alertIcon.classList.add('text-red-400');
     alertIcon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"></path>';
   } else if (type === 'warning') {
-    alertMessage.classList.add('bg-yellow-500/10', 'border', 'border-yellow-500/20');
-    alertText.classList.add('text-yellow-400');
-    alertIcon.classList.add('text-yellow-400');
     alertIcon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>';
   }
 
   // Auto-hide success messages after 5 seconds
   if (type === 'success') {
     setTimeout(() => {
+      alertMessage.classList.remove('show');
       alertMessage.classList.add('hidden');
     }, 5000);
   }
