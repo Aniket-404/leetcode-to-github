@@ -99,11 +99,27 @@ async function checkSubmissionStatus(url, tabId) {
 
 /**
  * Send message to content script in the tab
- * @param {number} tabId - The tab ID to send the message to
+ * @param {number} tabId - The tab ID to send the message to (might be -1)
  * @param {object} submissionData - The submission result data
  */
 async function notifyContentScript(tabId, submissionData) {
   try {
+    // If tabId is invalid, find the active LeetCode tab
+    if (tabId < 0) {
+      console.log('LeetCode to GitHub: Invalid tabId, searching for LeetCode tabs...');
+      const tabs = await chrome.tabs.query({ url: '*://*.leetcode.com/problems/*' });
+      
+      if (tabs.length === 0) {
+        console.log('LeetCode to GitHub: No LeetCode problem tabs found');
+        return;
+      }
+      
+      // Use the first LeetCode problem tab found (or the active one if available)
+      const activeTab = tabs.find(t => t.active) || tabs[0];
+      tabId = activeTab.id;
+      console.log('LeetCode to GitHub: Found LeetCode tab:', tabId);
+    }
+    
     // Verify the tab exists and is a LeetCode page
     const tab = await chrome.tabs.get(tabId);
     
