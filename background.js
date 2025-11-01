@@ -308,19 +308,16 @@ async function pushFileToGitHub(pat, owner, repo, file, problemTitle) {
       const existingFile = await checkResponse.json();
       sha = existingFile.sha;
       isUpdate = true;
-      console.log(`LeetCode to GitHub: File ${file.path} exists, will update (SHA: ${sha.substring(0, 7)}...)`);
+      console.log(`LeetCode to GitHub: File ${file.path} exists, will update (SHA: ${sha})`);
     } else if (checkResponse.status === 404) {
       console.log(`LeetCode to GitHub: File ${file.path} does not exist, will create`);
     } else {
       // Handle other errors from GET request
-      throw new Error(`Failed to check file existence: ${checkResponse.status} ${checkResponse.statusText}`);
+      console.warn(`LeetCode to GitHub: Unexpected status ${checkResponse.status} checking ${file.path}, attempting create`);
     }
   } catch (error) {
-    // Network errors or parsing errors
-    if (!error.message.includes('Failed to check')) {
-      throw new Error(`Network error checking file: ${error.message}`);
-    }
-    throw error;
+    // Network errors - log but continue (attempt create)
+    console.warn(`LeetCode to GitHub: Error checking file ${file.path}:`, error.message, '- attempting create');
   }
   
   // Step 2: Create or update the file (PUT request)
@@ -330,9 +327,14 @@ async function pushFileToGitHub(pat, owner, repo, file, problemTitle) {
   
   const body = {
     message: commitMessage,
-    content: file.content,
-    ...(sha && { sha }) // Include SHA only if file exists (update)
+    content: file.content
   };
+  
+  // Only include SHA if we have one (for updates)
+  if (sha) {
+    body.sha = sha;
+    console.log(`LeetCode to GitHub: Including SHA in request for ${file.path}`);
+  }
   
   try {
     const pushResponse = await fetch(apiUrl, {
