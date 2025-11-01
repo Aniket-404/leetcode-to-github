@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LeetCode to GitHub - Settings</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50 min-h-screen py-8 px-4">
+  <div class="max-w-2xl mx-auto">
+    <!-- Header -->
+    <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+      <div class="flex items-center space-x-3">
+        <svg class="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+        </svg>
+        <div>
+          <h1 class="text-2xl font-bold text-gray-900">LeetCode to GitHub</h1>
+          <p class="text-sm text-gray-600">Configure your GitHub integration</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Alert Message (hidden by default) -->
+    <div id="alertMessage" class="hidden mb-6 p-4 rounded-lg">
+      <div class="flex items-center">
+        <svg id="alertIcon" class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
+          <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
+        </svg>
+        <p id="alertText" class="text-sm font-medium"></p>
+      </div>
+    </div>
+
+    <!-- Settings Form -->
+    <div class="bg-white rounded-lg shadow-md p-6">
+      <form id="settingsForm" class="space-y-6">
+        <!-- GitHub Personal Access Token -->
+        <div>
+          <label for="githubToken" class="block text-sm font-medium text-gray-700 mb-2">
+            GitHub Personal Access Token (PAT)
+            <span class="text-red-500">*</span>
+          </label>
+          <input
+            type="password"
+            id="githubToken"
+            name="githubToken"
+            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+            placeholder="ghp_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+            required
+          />
+          <div class="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+            <p class="text-xs text-blue-800">
+              <strong>How to generate a PAT:</strong>
+            </p>
+            <ol class="text-xs text-blue-700 mt-1 ml-4 list-decimal space-y-1">
+              <li>Go to GitHub Settings → Developer settings → Personal access tokens → Tokens (classic)</li>
+              <li>Click "Generate new token (classic)"</li>
+              <li>Select scopes: <code class="bg-blue-100 px-1 py-0.5 rounded">repo</code> (full control of private repositories)</li>
+              <li>Copy and paste the token here</li>
+            </ol>
+          </div>
+        </div>
+
+        <!-- GitHub Username -->
+        <div>
+          <label for="githubUsername" class="block text-sm font-medium text-gray-700 mb-2">
+            GitHub Username
+            <span class="text-red-500">*</span>
+          </label>
+          <input
+            type="text"
+            id="githubUsername"
+            name="githubUsername"
+            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+            placeholder="your-username"
+            required
+          />
+          <p class="mt-1 text-xs text-gray-500">Your GitHub account username</p>
+        </div>
+
+        <!-- Repository Name -->
+        <div>
+          <label for="repositoryName" class="block text-sm font-medium text-gray-700 mb-2">
+            Repository Name
+            <span class="text-red-500">*</span>
+          </label>
+          <input
+            type="text"
+            id="repositoryName"
+            name="repositoryName"
+            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+            placeholder="leetcode-solutions"
+            required
+          />
+          <p class="mt-1 text-xs text-gray-500">The repository where solutions will be pushed (will be created if it doesn't exist)</p>
+        </div>
+
+        <!-- Submit Button -->
+        <div class="flex items-center justify-between pt-4 border-t border-gray-200">
+          <button
+            type="button"
+            id="testConnection"
+            class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+          >
+            Test Connection
+          </button>
+          <button
+            type="submit"
+            class="px-6 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors shadow-sm hover:shadow-md"
+          >
+            Save Settings
+          </button>
+        </div>
+      </form>
+    </div>
+
+    <!-- Footer Info -->
+    <div class="mt-6 text-center">
+      <p class="text-xs text-gray-500">
+        🔒 Your credentials are stored securely in Chrome's sync storage and never shared with third parties.
+      </p>
+    </div>
+  </div>
+
+  <script src="options.js"></script>
+</body>
+</html>
