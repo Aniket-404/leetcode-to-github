@@ -22,22 +22,11 @@ chrome.webRequest.onCompleted.addListener(
   async (details) => {
     console.log('LeetCode to GitHub: Detected submission check request:', details.url);
     
-    // Avoid processing the same submission multiple times
-    if (processedSubmissions.has(details.url)) {
-      console.log('LeetCode to GitHub: Submission already processed, skipping');
-      return;
-    }
-    
-    // Mark as processing
-    processedSubmissions.add(details.url);
-    
     // Fetch the submission result to check if it's "Accepted"
     try {
       await checkSubmissionStatus(details.url, details.tabId);
     } catch (error) {
       console.error('LeetCode to GitHub: Error checking submission status:', error);
-      // Remove from processed set to allow retry
-      processedSubmissions.delete(details.url);
     }
   },
   {
@@ -73,7 +62,7 @@ async function checkSubmissionStatus(url, tabId) {
     
     const data = await response.json();
     console.log('LeetCode to GitHub: Submission data received:', {
-      status: data.status_msg,
+      status_msg: data.status_msg,
       state: data.state
     });
     
@@ -81,14 +70,24 @@ async function checkSubmissionStatus(url, tabId) {
     // state: "SUCCESS" means the check is complete
     // status_msg: "Accepted" means the solution passed all test cases
     if (data.state === 'SUCCESS' && data.status_msg === 'Accepted') {
+      // Avoid processing the same submission multiple times
+      if (processedSubmissions.has(url)) {
+        console.log('LeetCode to GitHub: Submission already processed, skipping');
+        return;
+      }
+      
+      // Mark as processed
+      processedSubmissions.add(url);
+      
       console.log('LeetCode to GitHub: ✅ Accepted submission detected!');
       await notifyContentScript(tabId, data);
     } else if (data.state === 'PENDING' || data.state === 'STARTED') {
       console.log('LeetCode to GitHub: Submission still processing...');
-      // For pending submissions, we could set up a retry mechanism
-      // But LeetCode polls automatically, so we'll catch it on the next request
+      // Don't mark as processed - we'll check again when LeetCode polls
     } else {
       console.log('LeetCode to GitHub: Submission not accepted:', data.status_msg);
+      // Mark as processed so we don't check this failed submission again
+      processedSubmissions.add(url);
     }
   } catch (error) {
     console.error('LeetCode to GitHub: Error fetching submission status:', error);
