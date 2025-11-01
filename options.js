@@ -54,6 +54,77 @@ function setupAccessibility() {
   
   repoError.setAttribute('role', 'alert');
   repoError.setAttribute('aria-live', 'polite');
+  
+  // Setup tooltip triggers
+  setupTooltips();
+}
+
+/**
+ * Setup interactive tooltips
+ */
+function setupTooltips() {
+  const triggers = document.querySelectorAll('.tooltip-trigger');
+  
+  triggers.forEach(trigger => {
+    const tooltipId = trigger.getAttribute('data-tooltip');
+    const tooltip = document.getElementById(`tooltip-${tooltipId}`);
+    
+    if (!tooltip) return;
+    
+    // Click to toggle tooltip
+    trigger.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      
+      // Close all other tooltips
+      document.querySelectorAll('[id^="tooltip-"]').forEach(t => {
+        if (t !== tooltip) t.classList.add('hidden');
+      });
+      
+      // Toggle this tooltip
+      tooltip.classList.toggle('hidden');
+      
+      // Position tooltip near trigger
+      const rect = trigger.getBoundingClientRect();
+      tooltip.style.position = 'fixed';
+      tooltip.style.top = `${rect.bottom + 8}px`;
+      tooltip.style.left = `${rect.left - 150}px`; // Offset to left
+    });
+    
+    // Close button
+    const closeBtn = tooltip.querySelector('.tooltip-close');
+    if (closeBtn) {
+      closeBtn.addEventListener('click', () => {
+        tooltip.classList.add('hidden');
+      });
+    }
+    
+    // Keyboard accessibility - Enter/Space to open
+    trigger.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        trigger.click();
+      }
+    });
+  });
+  
+  // Close tooltips when clicking outside
+  document.addEventListener('click', (e) => {
+    if (!e.target.closest('.tooltip-trigger') && !e.target.closest('[id^="tooltip-"]')) {
+      document.querySelectorAll('[id^="tooltip-"]').forEach(t => {
+        t.classList.add('hidden');
+      });
+    }
+  });
+  
+  // Close tooltips on Escape key
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      document.querySelectorAll('[id^="tooltip-"]').forEach(t => {
+        t.classList.add('hidden');
+      });
+    }
+  });
 }
 
 // Form submission handler
