@@ -11,7 +11,8 @@
   },
   "permissions": [
     "storage",
-    "webRequest"
+    "webRequest",
+    "tabs"
   ],
   "host_permissions": [
     "*://*.leetcode.com/*",
