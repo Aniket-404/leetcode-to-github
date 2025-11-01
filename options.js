@@ -25,7 +25,36 @@ const repoError = document.getElementById('repoError');
 document.addEventListener('DOMContentLoaded', () => {
   loadSettings();
   setupEventListeners();
+  setupAccessibility();
 });
+
+/**
+ * Setup accessibility attributes
+ */
+function setupAccessibility() {
+  // Add ARIA attributes to inputs
+  tokenInput.setAttribute('aria-describedby', 'tokenError tokenSuccess');
+  tokenInput.setAttribute('aria-invalid', 'false');
+  
+  usernameInput.setAttribute('aria-describedby', 'usernameError');
+  usernameInput.setAttribute('aria-invalid', 'false');
+  
+  repoInput.setAttribute('aria-describedby', 'repoError');
+  repoInput.setAttribute('aria-invalid', 'false');
+  
+  // Add ARIA live regions to validation messages
+  tokenError.setAttribute('role', 'alert');
+  tokenError.setAttribute('aria-live', 'polite');
+  
+  tokenSuccess.setAttribute('role', 'status');
+  tokenSuccess.setAttribute('aria-live', 'polite');
+  
+  usernameError.setAttribute('role', 'alert');
+  usernameError.setAttribute('aria-live', 'polite');
+  
+  repoError.setAttribute('role', 'alert');
+  repoError.setAttribute('aria-live', 'polite');
+}
 
 // Form submission handler
 form.addEventListener('submit', async (e) => {
@@ -78,10 +107,35 @@ function setupEventListeners() {
     validateUsername();
   });
   
+  usernameInput.addEventListener('blur', () => {
+    validateUsername();
+  });
+  
   // Repository validation
   repoInput.addEventListener('input', () => {
     validateRepo();
     updateRepoLink();
+  });
+  
+  repoInput.addEventListener('blur', () => {
+    validateRepo();
+  });
+  
+  // Keyboard accessibility: Enter key on inputs triggers save
+  [tokenInput, usernameInput, repoInput].forEach(input => {
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        saveSettings();
+      }
+    });
+  });
+  
+  // Keyboard accessibility: Escape key clears alerts
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      alertMessage.classList.add('hidden');
+    }
   });
 }
 
@@ -188,6 +242,13 @@ function showValidationError(errorEl, successEl, message) {
   errorEl.querySelector('span').textContent = message;
   errorEl.classList.remove('hidden');
   if (successEl) successEl.classList.add('hidden');
+  
+  // Update ARIA attributes
+  const inputId = errorEl.id.replace('Error', '');
+  const input = document.getElementById(inputId === 'token' ? 'githubToken' : inputId === 'username' ? 'githubUsername' : 'repositoryName');
+  if (input) {
+    input.setAttribute('aria-invalid', 'true');
+  }
 }
 
 /**
@@ -197,6 +258,13 @@ function showValidationSuccess(errorEl, successEl, message) {
   successEl.querySelector('span').textContent = message;
   successEl.classList.remove('hidden');
   errorEl.classList.add('hidden');
+  
+  // Update ARIA attributes
+  const inputId = errorEl.id.replace('Error', '');
+  const input = document.getElementById(inputId === 'token' ? 'githubToken' : inputId === 'username' ? 'githubUsername' : 'repositoryName');
+  if (input) {
+    input.setAttribute('aria-invalid', 'false');
+  }
 }
 
 /**
@@ -205,6 +273,13 @@ function showValidationSuccess(errorEl, successEl, message) {
 function hideValidation(errorEl, successEl = null) {
   errorEl.classList.add('hidden');
   if (successEl) successEl.classList.add('hidden');
+  
+  // Update ARIA attributes
+  const inputId = errorEl.id.replace('Error', '');
+  const input = document.getElementById(inputId === 'token' ? 'githubToken' : inputId === 'username' ? 'githubUsername' : 'repositoryName');
+  if (input) {
+    input.setAttribute('aria-invalid', 'false');
+  }
 }
 
 /**
