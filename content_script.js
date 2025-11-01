@@ -156,8 +156,8 @@ async function handleSubmission(submissionData) {
     console.log('LeetCode to GitHub: ✅ Accepted status verified, scraping problem data...');
     showNotification('Accepted!', 'Extracting solution data...', 'success');
     
-    // Scrape problem data from the page
-    const problemData = await scrapeProblemData();
+    // Scrape problem data from the page, using submission data for language
+    const problemData = await scrapeProblemData(submissionData);
     
     if (!problemData) {
       console.error('LeetCode to GitHub: Failed to scrape problem data');
@@ -242,9 +242,10 @@ async function verifyAcceptedStatus() {
 /**
  * Scrape problem data from the LeetCode page
  * Coordinates all scraping functions and ensures data integrity
+ * @param {object} submissionData - Optional submission data from background script (contains lang, questionId)
  * @returns {Promise<object|null>} The scraped problem data, or null if critical data is missing
  */
-async function scrapeProblemData() {
+async function scrapeProblemData(submissionData = {}) {
   try {
     const data = {};
     
@@ -267,10 +268,15 @@ async function scrapeProblemData() {
       return null; // Code is required - fail if we can't get it
     }
     
-    // Scrape language (has default 'Unknown', never null)
-    data.language = scrapeLanguage();
-    if (data.language === 'Unknown') {
-      console.warn('LeetCode to GitHub: ⚠️ Language unknown, will use .txt extension');
+    // Use language from submissionData if available, otherwise scrape
+    if (submissionData.lang) {
+      data.language = submissionData.lang;
+      console.log('LeetCode to GitHub: ✅ Using language from submission data:', data.language);
+    } else {
+      data.language = scrapeLanguage();
+      if (data.language === 'Unknown') {
+        console.warn('LeetCode to GitHub: ⚠️ Language unknown, will use .txt extension');
+      }
     }
     
     // Map language to file extension (handles 'Unknown' gracefully)
