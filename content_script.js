@@ -184,80 +184,112 @@ async function handleSubmission(submissionData) {
 
 /**
  * Verify that the submission status is "Accepted"
- * @returns {Promise<boolean>} True if status is accepted
+ * PRIMARY SELECTOR: [data-e2e-locator="submission-result"] - Main submission result
+ * FALLBACK 1: [class*="submission-result"] - Result by class pattern
+ * FALLBACK 2: [class*="result-state"] - Result state container
+ * FALLBACK 3: .result__success - Success result class
+ * FALLBACK 4: [data-cy="submission-result"] - Test ID
+ * FALLBACK 5: [class*="accepted"] - Accepted class pattern
+ * DEFAULT: false if status cannot be determined
+ * @returns {Promise<boolean>} True if status is accepted, false otherwise
  */
 async function verifyAcceptedStatus() {
   try {
-    // Primary selector
-    let statusElement = document.querySelector('[data-e2e-locator="submission-result"]');
+    // Array of selectors to try in order
+    const selectors = [
+      '[data-e2e-locator="submission-result"]',    // Primary: E2E locator
+      '[class*="submission-result"]',              // Fallback 1: Class pattern
+      '[class*="result-state"]',                   // Fallback 2: Result state
+      '.result__success',                          // Fallback 3: Success class
+      '[data-cy="submission-result"]',             // Fallback 4: Test ID
+      '[class*="accepted"]',                       // Fallback 5: Accepted pattern
+      '[data-testid="submission-result"]'          // Fallback 6: Test ID variant
+    ];
     
-    // Fallback selectors
-    if (!statusElement) {
-      console.warn('LeetCode to GitHub: Primary status selector not found, trying fallbacks...');
-      statusElement = document.querySelector('[class*="submission-result"]') ||
-                     document.querySelector('[class*="result-state"]') ||
-                     document.querySelector('.result__success');
+    // Try each selector in sequence
+    for (let i = 0; i < selectors.length; i++) {
+      const selector = selectors[i];
+      const element = document.querySelector(selector);
+      
+      // Use optional chaining to safely access textContent
+      const statusText = element?.textContent?.trim()?.toLowerCase() || '';
+      
+      if (statusText.length > 0) {
+        const isAccepted = statusText.includes('accepted');
+        
+        // Log which selector was used
+        if (i === 0) {
+          console.log('LeetCode to GitHub: Status verified using primary selector:', statusText);
+        } else {
+          console.warn(`LeetCode to GitHub: ⚠️ Status verified using FALLBACK ${i} (${selector}):`, statusText);
+        }
+        
+        console.log('LeetCode to GitHub: Is accepted:', isAccepted);
+        return isAccepted;
+      }
     }
     
-    if (!statusElement) {
-      console.warn('LeetCode to GitHub: Could not find submission status element');
-      return false;
-    }
+    // All selectors failed - cannot determine status
+    console.error('LeetCode to GitHub: ❌ All status selectors failed, cannot verify acceptance');
+    return false;
     
-    const statusText = statusElement.textContent || '';
-    const isAccepted = statusText.toLowerCase().includes('accepted');
-    
-    console.log('LeetCode to GitHub: Status text:', statusText.trim());
-    console.log('LeetCode to GitHub: Is accepted:', isAccepted);
-    
-    return isAccepted;
   } catch (error) {
     console.error('LeetCode to GitHub: Error verifying status:', error);
-    return false;
+    return false; // Fail safe - don't push if we can't verify
   }
 }
 
 /**
  * Scrape problem data from the LeetCode page
- * @returns {Promise<object|null>} The scraped problem data
+ * Coordinates all scraping functions and ensures data integrity
+ * @returns {Promise<object|null>} The scraped problem data, or null if critical data is missing
  */
 async function scrapeProblemData() {
   try {
     const data = {};
     
-    // Scrape title
+    // Scrape title (has default, never null)
     data.title = scrapeTitle();
-    if (!data.title) {
-      console.error('LeetCode to GitHub: Failed to scrape title');
-      return null;
+    if (!data.title || data.title === 'Untitled Problem') {
+      console.warn('LeetCode to GitHub: ⚠️ Using default title');
     }
     
-    // Scrape description
+    // Scrape description (has default, never null)
     data.description = scrapeDescription();
+    if (!data.description || data.description === 'No description available') {
+      console.warn('LeetCode to GitHub: ⚠️ Using default description');
+    }
     
-    // Scrape code
+    // Scrape code (CRITICAL - can be null if all methods fail)
     data.code = scrapeCode();
     if (!data.code) {
-      console.error('LeetCode to GitHub: Failed to scrape code');
-      return null;
+      console.error('LeetCode to GitHub: ❌ CRITICAL: Failed to scrape code - cannot proceed');
+      return null; // Code is required - fail if we can't get it
     }
     
-    // Scrape language
+    // Scrape language (has default 'Unknown', never null)
     data.language = scrapeLanguage();
-    if (!data.language) {
-      console.warn('LeetCode to GitHub: Failed to scrape language, using default');
-      data.language = 'Unknown';
+    if (data.language === 'Unknown') {
+      console.warn('LeetCode to GitHub: ⚠️ Language unknown, will use .txt extension');
     }
     
-    // Map language to file extension
+    // Map language to file extension (handles 'Unknown' gracefully)
     data.extension = getFileExtension(data.language);
     
-    // Generate slug from title
+    // Generate slug from title (safe even with default title)
     data.slug = generateSlug(data.title);
     
     // Add metadata
     data.timestamp = Date.now();
     data.url = window.location.href;
+    
+    // Log successful scraping summary
+    console.log('LeetCode to GitHub: ✅ Problem data scraped successfully');
+    console.log('LeetCode to GitHub: - Title:', data.title);
+    console.log('LeetCode to GitHub: - Language:', data.language);
+    console.log('LeetCode to GitHub: - Extension:', data.extension);
+    console.log('LeetCode to GitHub: - Code length:', data.code?.length || 0, 'characters');
+    console.log('LeetCode to GitHub: - Description length:', data.description?.length || 0, 'characters');
     
     return data;
   } catch (error) {
@@ -268,126 +300,214 @@ async function scrapeProblemData() {
 
 /**
  * Scrape problem title
- * @returns {string|null} The problem title
+ * PRIMARY SELECTOR: [data-cy="question-title"] - Main title with test ID
+ * FALLBACK 1: [class*="question-title"] - Title by class pattern
+ * FALLBACK 2: h1 - First heading element
+ * FALLBACK 3: .css-v3d350 - Legacy CSS class
+ * DEFAULT: 'Untitled Problem' if all selectors fail
+ * @returns {string} The problem title (never null due to default)
  */
 function scrapeTitle() {
   try {
-    // Primary selector
-    let titleElement = document.querySelector('[data-cy="question-title"]');
+    // Array of selectors to try in order (primary first, then fallbacks)
+    const selectors = [
+      '[data-cy="question-title"]',        // Primary: Test ID selector
+      '[class*="question-title"]',         // Fallback 1: Class pattern match
+      'h1',                                 // Fallback 2: Generic h1
+      '.css-v3d350',                        // Fallback 3: Legacy class
+      '[data-testid="question-title"]',    // Fallback 4: Alternative test ID
+      'div[class*="title"] h1'              // Fallback 5: Title wrapper with h1
+    ];
     
-    // Fallback selectors
-    if (!titleElement) {
-      console.warn('LeetCode to GitHub: Primary title selector not found, trying fallbacks...');
-      titleElement = document.querySelector('[class*="question-title"]') ||
-                    document.querySelector('h1') ||
-                    document.querySelector('.css-v3d350');
+    // Try each selector in sequence
+    for (let i = 0; i < selectors.length; i++) {
+      const selector = selectors[i];
+      const element = document.querySelector(selector);
+      
+      // Use optional chaining to safely access textContent
+      const title = element?.textContent?.trim();
+      
+      if (title && title.length > 0) {
+        // Log which selector was used
+        if (i === 0) {
+          console.log('LeetCode to GitHub: Title scraped using primary selector:', title);
+        } else {
+          console.warn(`LeetCode to GitHub: ⚠️ Title scraped using FALLBACK ${i} (${selector}):`, title);
+        }
+        return title;
+      }
     }
     
-    if (titleElement) {
-      const title = titleElement.textContent.trim();
-      console.log('LeetCode to GitHub: Title scraped:', title);
-      return title;
-    }
+    // All selectors failed - use default value
+    console.error('LeetCode to GitHub: ❌ All title selectors failed, using default');
+    return 'Untitled Problem';
     
-    console.error('LeetCode to GitHub: Could not find title element');
-    return null;
   } catch (error) {
     console.error('LeetCode to GitHub: Error scraping title:', error);
-    return null;
+    return 'Untitled Problem'; // Ensure we never return null
   }
 }
 
 /**
  * Scrape problem description
- * @returns {string} The problem description (HTML or text)
+ * PRIMARY SELECTOR: .prose - Main description container
+ * FALLBACK 1: [class*="elfjS"] - Description by class pattern
+ * FALLBACK 2: [class*="question-content"] - Question content container
+ * FALLBACK 3: [data-cy="question-description"] - Description test ID
+ * FALLBACK 4: .question-description - Legacy class
+ * DEFAULT: 'No description available' if all selectors fail
+ * @returns {string} The problem description HTML (never null due to default)
  */
 function scrapeDescription() {
   try {
-    // Primary selector for description
-    let descElement = document.querySelector('.prose') ||
-                     document.querySelector('[class*="elfjS"]') ||
-                     document.querySelector('[class*="question-content"]');
+    // Array of selectors to try in order
+    const selectors = [
+      '.prose',                              // Primary: Prose container
+      '[class*="elfjS"]',                    // Fallback 1: Class pattern
+      '[class*="question-content"]',         // Fallback 2: Question content
+      '[data-cy="question-description"]',    // Fallback 3: Test ID
+      '.question-description',               // Fallback 4: Legacy class
+      'div[class*="description"]'            // Fallback 5: Generic description div
+    ];
     
-    if (descElement) {
-      // Clean up the HTML
-      const description = descElement.innerHTML;
-      console.log('LeetCode to GitHub: Description scraped (length:', description.length, 'chars)');
-      return description;
+    // Try each selector in sequence
+    for (let i = 0; i < selectors.length; i++) {
+      const selector = selectors[i];
+      const element = document.querySelector(selector);
+      
+      // Use optional chaining to safely access innerHTML
+      const description = element?.innerHTML?.trim();
+      
+      if (description && description.length > 0) {
+        // Log which selector was used
+        if (i === 0) {
+          console.log('LeetCode to GitHub: Description scraped using primary selector (length:', description.length, 'chars)');
+        } else {
+          console.warn(`LeetCode to GitHub: ⚠️ Description scraped using FALLBACK ${i} (${selector}), length:`, description.length);
+        }
+        return description;
+      }
     }
     
-    console.warn('LeetCode to GitHub: Could not find description element');
+    // All selectors failed - use default value
+    console.error('LeetCode to GitHub: ❌ All description selectors failed, using default');
     return 'No description available';
+    
   } catch (error) {
     console.error('LeetCode to GitHub: Error scraping description:', error);
-    return 'Error extracting description';
+    return 'Error extracting description'; // Ensure we never return null
   }
 }
 
 /**
  * Scrape submitted code
- * @returns {string|null} The submitted code
+ * PRIMARY METHOD: Monaco Editor API (window.monaco.editor.getModels())
+ * FALLBACK 1: pre code - Code in pre/code elements
+ * FALLBACK 2: .monaco-editor - Monaco editor container
+ * FALLBACK 3: [class*="code-area"] - Code area by class pattern
+ * FALLBACK 4: [data-testid="code-editor"] - Code editor test ID
+ * FALLBACK 5: textarea[class*="code"] - Code textarea
+ * DEFAULT: null if all methods fail (indicates critical failure)
+ * @returns {string|null} The submitted code (null only if all attempts fail)
  */
 function scrapeCode() {
   try {
-    // Try to get code from Monaco editor
-    if (window.monaco && window.monaco.editor) {
+    // PRIMARY: Try Monaco Editor API (most reliable)
+    if (window.monaco?.editor) {
       const models = window.monaco.editor.getModels();
-      if (models && models.length > 0) {
-        const code = models[0].getValue();
+      const code = models?.[0]?.getValue();
+      
+      if (code && code.trim().length > 0) {
         console.log('LeetCode to GitHub: Code scraped from Monaco editor (length:', code.length, 'chars)');
         return code;
       }
     }
     
-    console.warn('LeetCode to GitHub: Monaco editor not found, trying fallback...');
+    // FALLBACKS: Try DOM-based selectors
+    const selectors = [
+      'pre code',                          // Fallback 1: Standard pre/code
+      '.monaco-editor',                    // Fallback 2: Monaco container
+      '[class*="code-area"]',              // Fallback 3: Code area pattern
+      '[data-testid="code-editor"]',       // Fallback 4: Test ID
+      'textarea[class*="code"]',           // Fallback 5: Code textarea
+      '.CodeMirror',                       // Fallback 6: CodeMirror editor
+      '[class*="editor"] textarea'         // Fallback 7: Editor textarea
+    ];
     
-    // Fallback: Try to find code in pre/code elements
-    const codeElement = document.querySelector('pre code') ||
-                       document.querySelector('.monaco-editor') ||
-                       document.querySelector('[class*="code-area"]');
-    
-    if (codeElement) {
-      const code = codeElement.textContent;
-      console.log('LeetCode to GitHub: Code scraped from fallback (length:', code.length, 'chars)');
-      return code;
+    for (let i = 0; i < selectors.length; i++) {
+      const selector = selectors[i];
+      const element = document.querySelector(selector);
+      
+      // Use optional chaining to safely access content
+      const code = element?.textContent?.trim() || element?.value?.trim();
+      
+      if (code && code.length > 0) {
+        console.warn(`LeetCode to GitHub: ⚠️ Code scraped using FALLBACK ${i + 1} (${selector}), length:`, code.length);
+        return code;
+      }
     }
     
-    console.error('LeetCode to GitHub: Could not find code');
+    // All methods failed - this is critical, return null to signal failure
+    console.error('LeetCode to GitHub: ❌ All code scraping methods failed');
     return null;
+    
   } catch (error) {
     console.error('LeetCode to GitHub: Error scraping code:', error);
-    return null;
+    return null; // Return null to indicate critical failure
   }
 }
 
 /**
  * Scrape programming language
- * @returns {string|null} The programming language
+ * PRIMARY SELECTOR: button[id^="headlessui-listbox-button-"] - Language dropdown button
+ * FALLBACK 1: [class*="lang-select"] - Language select by class pattern
+ * FALLBACK 2: [class*="language-picker"] - Language picker container
+ * FALLBACK 3: button[aria-label*="language"] - Button with language aria-label
+ * FALLBACK 4: [data-cy="language-select"] - Language select test ID
+ * FALLBACK 5: select[class*="language"] - Language select element
+ * DEFAULT: 'Unknown' if all selectors fail (extension mapping handles this)
+ * @returns {string} The programming language (never null due to default)
  */
 function scrapeLanguage() {
   try {
-    // Primary selector for language dropdown
-    let langElement = document.querySelector('button[id^="headlessui-listbox-button-"]');
+    // Array of selectors to try in order
+    const selectors = [
+      'button[id^="headlessui-listbox-button-"]',  // Primary: Headless UI dropdown
+      '[class*="lang-select"]',                     // Fallback 1: Lang select class
+      '[class*="language-picker"]',                 // Fallback 2: Language picker
+      'button[aria-label*="language"]',             // Fallback 3: Aria-label match
+      '[data-cy="language-select"]',                // Fallback 4: Test ID
+      'select[class*="language"]',                  // Fallback 5: Select element
+      'button[class*="language"]',                  // Fallback 6: Language button
+      '.language-selector'                          // Fallback 7: Legacy class
+    ];
     
-    // Fallback selectors
-    if (!langElement) {
-      console.warn('LeetCode to GitHub: Primary language selector not found, trying fallbacks...');
-      langElement = document.querySelector('[class*="lang-select"]') ||
-                   document.querySelector('[class*="language-picker"]') ||
-                   document.querySelector('button[aria-label*="language"]');
+    // Try each selector in sequence
+    for (let i = 0; i < selectors.length; i++) {
+      const selector = selectors[i];
+      const element = document.querySelector(selector);
+      
+      // Use optional chaining to safely access textContent or value
+      const language = element?.textContent?.trim() || element?.value?.trim();
+      
+      if (language && language.length > 0) {
+        // Log which selector was used
+        if (i === 0) {
+          console.log('LeetCode to GitHub: Language scraped using primary selector:', language);
+        } else {
+          console.warn(`LeetCode to GitHub: ⚠️ Language scraped using FALLBACK ${i} (${selector}):`, language);
+        }
+        return language;
+      }
     }
     
-    if (langElement) {
-      const language = langElement.textContent.trim();
-      console.log('LeetCode to GitHub: Language scraped:', language);
-      return language;
-    }
+    // All selectors failed - use default value
+    console.error('LeetCode to GitHub: ❌ All language selectors failed, using default');
+    return 'Unknown';
     
-    console.warn('LeetCode to GitHub: Could not find language element');
-    return null;
   } catch (error) {
     console.error('LeetCode to GitHub: Error scraping language:', error);
-    return null;
+    return 'Unknown'; // Ensure we never return null
   }
 }
 
