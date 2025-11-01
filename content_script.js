@@ -3,6 +3,9 @@
 
 console.log('LeetCode to GitHub: Content script loaded on', window.location.href);
 
+// Track processed submissions to prevent duplicate pushes
+const processedSubmissions = new Set();
+
 /**
  * Language to file extension mapping
  * Maps LeetCode language names to their corresponding file extensions
@@ -123,9 +126,26 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     console.log('LeetCode to GitHub: 🎉 Submission detected!');
     console.log('LeetCode to GitHub: Submission details:', message.data);
     
+    // Check if this submission has already been processed
+    const submissionId = message.data.submissionId;
+    if (processedSubmissions.has(submissionId)) {
+      console.log(`LeetCode to GitHub: Submission ${submissionId} already processed, skipping`);
+      sendResponse({ status: 'duplicate', timestamp: Date.now() });
+      return true;
+    }
+    
+    // Mark as processed immediately to prevent race conditions
+    processedSubmissions.add(submissionId);
+    console.log(`LeetCode to GitHub: Marked submission ${submissionId} as processed`);
+    
     // Handle the submission asynchronously
     handleSubmission(message.data).then(() => {
       sendResponse({ status: 'received', timestamp: Date.now() });
+    }).catch((error) => {
+      console.error('LeetCode to GitHub: Error handling submission:', error);
+      // Remove from processed set on error so it can be retried
+      processedSubmissions.delete(submissionId);
+      sendResponse({ status: 'error', error: error.message, timestamp: Date.now() });
     });
     
     return true; // Keep the message channel open for async response
@@ -663,6 +683,14 @@ async function testBackgroundConnection() {
     return false;
   }
 }
+
+// Cleanup old processed submissions every 5 minutes to prevent memory leaks
+setInterval(() => {
+  if (processedSubmissions.size > 50) {
+    processedSubmissions.clear();
+    console.log('LeetCode to GitHub: Cleared processed submissions cache in content script');
+  }
+}, 5 * 60 * 1000);
 
 // Test connection on load
 testBackgroundConnection();
