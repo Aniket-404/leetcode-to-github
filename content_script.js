@@ -252,7 +252,17 @@ async function scrapeProblemData(submissionData = {}) {
     // Scrape title (has default, never null)
     data.title = scrapeTitle();
     if (!data.title || data.title === 'Untitled Problem') {
-      console.warn('LeetCode to GitHub: ⚠️ Using default title');
+      // Try to get title from URL as fallback
+      const urlMatch = window.location.pathname.match(/\/problems\/([^/]+)/);
+      if (urlMatch && urlMatch[1]) {
+        // Convert slug to title (e.g., "two-sum" -> "Two Sum")
+        data.title = urlMatch[1].split('-').map(word => 
+          word.charAt(0).toUpperCase() + word.slice(1)
+        ).join(' ');
+        console.log('LeetCode to GitHub: ✅ Using title from URL:', data.title);
+      } else {
+        console.warn('LeetCode to GitHub: ⚠️ Using default title');
+      }
     }
     
     // Scrape description (has default, never null)
