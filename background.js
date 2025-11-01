@@ -69,14 +69,28 @@ async function checkSubmissionStatus(url, tabId) {
     const data = await response.json();
     console.log('LeetCode to GitHub: Submission data received:', {
       status_msg: data.status_msg,
-      state: data.state
+      state: data.state,
+      total_testcases: data.total_testcases,
+      run_success: data.run_success
     });
+    
+    // CRITICAL: Distinguish between "Run Code" and "Submit"
+    // "Run Code" (interpret_solution) has run_success field
+    // "Submit" has total_testcases field
+    // Only process actual submissions, not test runs
+    if (data.run_success !== undefined) {
+      console.log('LeetCode to GitHub: This is a test run, not a submission. Skipping GitHub push.');
+      processedSubmissions.add(url);
+      return;
+    }
     
     // Check if submission is complete and accepted
     // state: "SUCCESS" means the check is complete
     // status_msg: "Accepted" means the solution passed all test cases
-    if (data.state === 'SUCCESS' && data.status_msg === 'Accepted') {
+    // total_testcases: Must be present for actual submissions
+    if (data.state === 'SUCCESS' && data.status_msg === 'Accepted' && data.total_testcases) {
       console.log('LeetCode to GitHub: ✅ Accepted submission detected!');
+      console.log(`LeetCode to GitHub: Passed ${data.total_correct}/${data.total_testcases} test cases`);
       
       // Mark as processed FIRST to prevent race conditions with multiple polls
       processedSubmissions.add(url);
