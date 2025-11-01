@@ -165,7 +165,13 @@ async function handleSubmission(submissionData) {
       return;
     }
     
-    console.log('LeetCode to GitHub: Problem data scraped successfully:', problemData);
+    // Log summary without exposing sensitive code
+    console.log('LeetCode to GitHub: ✅ Problem data scraped successfully');
+    console.log('LeetCode to GitHub: - Title:', problemData.title);
+    console.log('LeetCode to GitHub: - Language:', problemData.language);
+    console.log('LeetCode to GitHub: - Extension:', problemData.extension);
+    console.log('LeetCode to GitHub: - Code length:', problemData.code?.length || 0, 'characters');
+    console.log('LeetCode to GitHub: - Description length:', problemData.description?.length || 0, 'characters');
     
     // Send data to background script for GitHub push
     await sendToBackground(problemData);
