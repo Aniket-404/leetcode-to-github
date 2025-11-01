@@ -1,3 +1,36 @@
+// Security: Prevent token from being logged or exposed in DevTools
+// MUST be at the top before any other code runs
+const originalLog = console.log;
+const originalError = console.error;
+const originalWarn = console.warn;
+
+console.log = function(...args) {
+  const filteredArgs = args.map(arg => 
+    typeof arg === 'string' && (arg.includes('ghp_') || arg.includes('github_pat_')) 
+      ? '[REDACTED_TOKEN]' 
+      : arg
+  );
+  originalLog.apply(console, filteredArgs);
+};
+
+console.error = function(...args) {
+  const filteredArgs = args.map(arg => 
+    typeof arg === 'string' && (arg.includes('ghp_') || arg.includes('github_pat_')) 
+      ? '[REDACTED_TOKEN]' 
+      : arg
+  );
+  originalError.apply(console, filteredArgs);
+};
+
+console.warn = function(...args) {
+  const filteredArgs = args.map(arg => 
+    typeof arg === 'string' && (arg.includes('ghp_') || arg.includes('github_pat_')) 
+      ? '[REDACTED_TOKEN]' 
+      : arg
+  );
+  originalWarn.apply(console, filteredArgs);
+};
+
 // DOM Elements
 const form = document.getElementById('settingsForm');
 const alertMessage = document.getElementById('alertMessage');
@@ -577,36 +610,3 @@ function showAlert(message, type = 'success') {
     }, 5000);
   }
 }
-
-// Security: Prevent token from being logged or exposed in DevTools
-// Override console methods to prevent accidental token exposure
-const originalLog = console.log;
-const originalError = console.error;
-const originalWarn = console.warn;
-
-console.log = function(...args) {
-  const filteredArgs = args.map(arg => 
-    typeof arg === 'string' && (arg.includes('ghp_') || arg.includes('github_pat_')) 
-      ? '[REDACTED_TOKEN]' 
-      : arg
-  );
-  originalLog.apply(console, filteredArgs);
-};
-
-console.error = function(...args) {
-  const filteredArgs = args.map(arg => 
-    typeof arg === 'string' && (arg.includes('ghp_') || arg.includes('github_pat_')) 
-      ? '[REDACTED_TOKEN]' 
-      : arg
-  );
-  originalError.apply(console, filteredArgs);
-};
-
-console.warn = function(...args) {
-  const filteredArgs = args.map(arg => 
-    typeof arg === 'string' && (arg.includes('ghp_') || arg.includes('github_pat_')) 
-      ? '[REDACTED_TOKEN]' 
-      : arg
-  );
-  originalWarn.apply(console, filteredArgs);
-};
