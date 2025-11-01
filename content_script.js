@@ -311,12 +311,14 @@ function scrapeTitle() {
   try {
     // Array of selectors to try in order (primary first, then fallbacks)
     const selectors = [
+      'a[href*="/problems/"]',              // NEW: Problem link in breadcrumb/title
       '[data-cy="question-title"]',        // Primary: Test ID selector
-      '[class*="question-title"]',         // Fallback 1: Class pattern match
-      'h1',                                 // Fallback 2: Generic h1
-      '.css-v3d350',                        // Fallback 3: Legacy class
-      '[data-testid="question-title"]',    // Fallback 4: Alternative test ID
-      'div[class*="title"] h1'              // Fallback 5: Title wrapper with h1
+      'div[class*="text-title"] a',         // Fallback 1: Title link
+      '[class*="question-title"]',         // Fallback 2: Class pattern match
+      'h1',                                 // Fallback 3: Generic h1
+      '.css-v3d350',                        // Fallback 4: Legacy class
+      '[data-testid="question-title"]',    // Fallback 5: Alternative test ID
+      'div[class*="title"] h1'              // Fallback 6: Title wrapper with h1
     ];
     
     // Try each selector in sequence
@@ -472,14 +474,16 @@ function scrapeLanguage() {
   try {
     // Array of selectors to try in order
     const selectors = [
-      'button[id^="headlessui-listbox-button-"]',  // Primary: Headless UI dropdown
-      '[class*="lang-select"]',                     // Fallback 1: Lang select class
-      '[class*="language-picker"]',                 // Fallback 2: Language picker
-      'button[aria-label*="language"]',             // Fallback 3: Aria-label match
-      '[data-cy="language-select"]',                // Fallback 4: Test ID
-      'select[class*="language"]',                  // Fallback 5: Select element
-      'button[class*="language"]',                  // Fallback 6: Language button
-      '.language-selector'                          // Fallback 7: Legacy class
+      'button[id^="headlessui-listbox-button-"] span',  // Primary: Headless UI dropdown text
+      'button[id^="headlessui-listbox-button-"]',       // Primary alt: Full button
+      'div[class*="text-label-3"] button',               // NEW: Modern language button
+      '[class*="lang-select"]',                          // Fallback 1: Lang select class
+      '[class*="language-picker"]',                      // Fallback 2: Language picker
+      'button[aria-label*="language"]',                  // Fallback 3: Aria-label match
+      '[data-cy="language-select"]',                     // Fallback 4: Test ID
+      'select[class*="language"]',                       // Fallback 5: Select element
+      'button[class*="language"]',                       // Fallback 6: Language button
+      '.language-selector'                               // Fallback 7: Legacy class
     ];
     
     // Try each selector in sequence
